@@ -3,6 +3,7 @@
 import express from 'express';
 import cors from 'cors';
 import { v4 as uuid } from 'uuid';
+import pg from 'pg';
 // //import express
 // const express = require('express')
 // //import cors
@@ -19,6 +20,103 @@ const app = express()
 //uses cors headers to allow requests between servers
 app.use(cors())
 app.use(express.json());
+
+
+async function getAllFromDatabase(username) {
+    //create client
+    const client = new pg.Client({
+        user: 'wesleyliu',
+        database: 'postgres',
+        password: 'wesleyliu', 
+        port: 5432,
+    });
+
+    //connect client
+    await client.connect()
+
+    const tableName = 'todos';
+    const queryText = 'SELECT * FROM ' + tableName + ' WHERE username = $1';
+    const values = [username];
+
+    const res = await client.query(queryText, values);
+    console.log(res);
+    
+    //close connection
+    await client.end()
+
+    return res.rows;
+}
+
+async function insertIntoDatabase(username, id, task) {
+    //create client
+    const client = new pg.Client({
+        user: 'wesleyliu',
+        database: 'postgres',
+        password: 'wesleyliu', 
+        port: 5432,
+    });
+
+    //connect client
+    await client.connect()
+
+    const tableName = 'todos';
+    const queryText = 'INSERT INTO ' + tableName + ' (id, username, task) VALUES ($1, $2, $3)';
+    const values = [id, username, task];
+
+    const res = await client.query(queryText, values);
+    console.log(res);
+    
+    //close connection
+    await client.end()
+}
+
+async function removeFromDatabase(id, username) {
+    //create client
+    const client = new pg.Client({
+        user: 'wesleyliu',
+        database: 'postgres',
+        password: 'wesleyliu', 
+        port: 5432,
+    });
+
+    //connect client
+    await client.connect()
+
+    const tableName = 'todos';
+    const queryText = 'DELETE FROM ' + tableName + ' WHERE id = $1 AND username = $2';
+    const values = [id, username];
+
+    const res = await client.query(queryText, values);
+    console.log(res);
+    
+    //close connection
+    await client.end()
+}
+
+
+async function toggleCompleteDatabase(id, username) {
+    //create client
+    const client = new pg.Client({
+        user: 'wesleyliu',
+        database: 'postgres',
+        password: 'wesleyliu', 
+        port: 5432,
+    });
+
+    //connect client
+    await client.connect()
+
+    const tableName = 'todos';
+    const queryText = 'UPDATE ' + tableName + ' SET completed = NOT completed WHERE id = $1 AND username = $2';
+    const values = [id, username];
+
+    const res = await client.query(queryText, values);
+    console.log(res);
+    
+    //close connection
+    await client.end()
+}
+
 
 /*
 This app.get() below takes two arguments.
@@ -57,46 +155,33 @@ app.listen(port, host, () => {
   console.log(`Example app listening on port ${port}`)
 })
 
-let todos = [];
+// let todos = [];
 
-app.get('/todos', (req, res) => {
+app.get('/todos', async (req, res) => {
+    const todos = await getAllFromDatabase(req.query.username);
     res.json(todos);
 })
 
-app.post('/add-todo', (req, res) => {
+app.post('/add-todo', async (req, res) => {
+    const id = uuid();
+    await insertIntoDatabase(req.body.username, id, req.body.task);
+
     const newTodo = {
-        id: uuid(),
+        id: id,
         task: req.body.task,
         completed: false
     };
-    todos = [newTodo, ...todos];
     res.json(newTodo);
 });
 
-app.delete('/delete-todo', (req, res) => {
-    const newTodos = todos.filter((item) => item.id != req.body.id);
-    todos = newTodos;
+app.delete('/delete-todo', async (req, res) => {
+    await removeFromDatabase(req.body.id, req.body.username)
     res.status(200);
 });
 
-app.put('/check-todo', (req, res) => {
-    let found = false;
-    todos = todos.map(todo => {
-            if (todo.id === req.body.id) {
-                return {
-                ...todo,
-                completed: !todo.completed
-                };
-            }
-            found = true;
-            return todo;
-            })
-    if (found == true) {
-        res.status(200).send("Successful check");
-    } else {
-        res.status(404).send("Failed to check");
-    }
-    
+app.put('/check-todo', async (req, res) => {
+    await toggleCompleteDatabase(req.body.id, req.body.username);
+    res.status(200);
 })
 
 /*
