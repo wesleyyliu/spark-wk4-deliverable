@@ -4,23 +4,62 @@ import {useState} from "react";
 import {useEffect} from "react";
 import TodoForm from "./components/TodoForm";
 import TodoList from "./components/TodoList";
+import UsernameForm from "./components/UsernameForm";
+
 
 function App() {
-    useEffect(() => {
-        fetch('http://localhost:5000/todos')
-            .then((res) => res.json())
-            .then((data) => setTodos(data));
-    }, []);
+    const [todos, setTodos] = useState([]);
+    const [username, setUsername] = useState('');
 
-    const[todos, setTodos] = useState([])
+    useEffect(() => {
+        getTodos(username);
+        console.log('username changed');
+    }, [username]);
 
     function addTodo(todo) {
-        setTodos([todo, ...todos]);
+        const postData = {
+            username: username,
+            task: todo.task
+        };
+
+        const requestOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(postData)
+        };
+
+        fetch('http://localhost:5000/add-todo', requestOptions)
+            .then(response => response.json())
+            .then(newTodo => {
+                setTodos([newTodo, ...todos]);
+            })
+            .catch(error => {
+                console.log('Error adding todo');
+            });
+    }
+
+    function getTodos(username) {
+        fetch(`http://localhost:5000/todos?username=${username}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(todos => {
+            setTodos(todos);
+        })
+        .catch(error => {
+            console.log('Error getting todos');
+        });
     }
     
     function toggleComplete(id) {
         const putData = {
-            id: id
+            id: id,
+            username: username
         };
 
         // PUT request options
@@ -50,10 +89,11 @@ function App() {
     
     function removeTodo(id) {
         const deleteData = {
-            id: id
+            id: id,
+            username: username
         };
 
-        // PUT request options
+        // DELETE request options
         const requestOptions = {
             method: 'DELETE',
             headers: {
@@ -72,6 +112,7 @@ function App() {
        <div className = "App">
            <header className = "App-header">
                <p>React Todo</p>
+               <UsernameForm addUsername={setUsername}/>
                <TodoForm addTodo={addTodo}/>
                <TodoList
                     todos={todos}

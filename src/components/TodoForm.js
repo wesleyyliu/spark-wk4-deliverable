@@ -2,6 +2,7 @@ import { useState } from "react";
 import {v4 as uuid} from "uuid";
 
  function TodoForm({ addTodo }) {
+  
   const[todo, setTodo] = useState({
     id: "",
     task: "",
@@ -15,21 +16,7 @@ import {v4 as uuid} from "uuid";
   function handleSubmit(e) {
     e.preventDefault();
     if (todo.task.trim()) {
-      // update backend
-      const requestOptions = {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(todo)
-      };
-      fetch('http://localhost:5000/add-todo', requestOptions)
-        .then((res) => res.json())
-        .then((data) => addTodo(data));
-
-      // update internal state
-      // addTodo({ ...todo, id: uuid() });
-      setTodo({ ...todo, task: ""});
+      addTodo(todo);
     }
   }
 
